@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+<h2>거래 확정을 눌러주세요.</h2>
+<p>안녕하세요, <span th:text="${buyerName}"></span>님,</p>
+<p><span th:text="${sellerName}"></span>님과의 거래가 성공적으로 이루어지셨나요?</p>
+<p>상품 : <span th:text="${productName}"></span> 을 잘 받으셨다면, 거래 확정 버튼을 눌러주세요 !</p>
+<a th:href="@{http://localhost:8080/order/confirm/{orderId}(orderId=${orderId})}"
+   style="display:inline-block; padding:10px 20px; background-color:#FF5733; color:white; text-decoration:none; border-radius:5px;">
+    거래 확정
+</a>
+<p>거래 일자 이후로 7일이 지나면, 자동 확정이 됩니다 !</p>
+</body>
+</html>

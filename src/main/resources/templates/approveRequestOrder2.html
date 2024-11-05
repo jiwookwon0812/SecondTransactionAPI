@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+<h2>거래 요청이 승인되었습니다</h2>
+<p>안녕하세요, <span th:text="${sellerName}"></span>님,</p>
+<p><span th:text="${buyerName}"></span>님이 결제를 완료하셨습니다.</p>
+<p>상품 : <span th:text="${productName}"></span></p>
+<p><span th:text="${buyerName}"></span>님의 전화번호 : <span th:text="${buyerPhoneNumber}"></span></p>
+<p>거래를 진행해보세요 !</p>
+</body>
+</html>

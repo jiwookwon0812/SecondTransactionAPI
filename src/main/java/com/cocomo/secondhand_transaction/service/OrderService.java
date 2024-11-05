@@ -10,6 +10,7 @@ import com.cocomo.secondhand_transaction.entity.constant.RequestOrder;
 import com.cocomo.secondhand_transaction.repository.OrderRepository;
 import com.cocomo.secondhand_transaction.repository.ProductRepository;
 import com.cocomo.secondhand_transaction.repository.UserRepository;
+import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -31,6 +32,7 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
+    private final EmailService emailService;
     private static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd-HH-mm");
 
     // 상품 등록 유저 객체 찾기
@@ -41,7 +43,7 @@ public class OrderService {
     }
 
     // 거래 요청
-    public void requestOrder(OrderDto.Order orderDto, Authentication authentication) {
+    public void requestOrder(OrderDto.Order orderDto, Authentication authentication) throws MessagingException {
         // 구매자 User 객체 찾기
         User buyer = findUserByAuthentication(authentication);
 
@@ -61,11 +63,12 @@ public class OrderService {
         Order order = new Order(orderDto, seller, buyer, product);
         orderRepository.save(order);
         // 이메일 발송
-        log.info("{}님, {}님으로부터 {}상품에 대한 거래 요청이 왔습니다.", seller.getNickname(), buyer.getNickname(), product.getPd_name());
+        emailService.sendOrderRequest(seller.getEmail(), seller.getNickname(), buyer.getNickname(), product.getPd_name(), order.getOrderNum());
+
     }
 
     // 거래 요청 승인
-    public void approveOrder(String orderNum, Authentication authentication) {
+    public void approveOrder(String orderNum, Authentication authentication) throws MessagingException {
         // order 찾기
         Order order = orderRepository.findByOrderNum(orderNum)
                 .orElseThrow(() -> new RuntimeException("해당 주문을 찾을 수 없습니다."));
@@ -83,15 +86,13 @@ public class OrderService {
         }
         orderRepository.save(order);
         // 이메일 발송
-        log.info("{}님, {}님이 거래 요청을 승인하셨습니다. 상품 정보 : {}, 판매자 번호 : {}",
-                order.getBuyer().getNickname(), seller.getNickname(), order.getProduct().getPd_name(), seller.getPhone_nb()); // 구매자에게
-        log.info("거래 요청을 승인하셨습니다. 상품 정보 : {}, 구매자 번호 : {}",
-                order.getProduct().getPd_name(), order.getBuyer().getPhone_nb()); // -> 판매자에게
+        emailService.approveOrder1(order.getBuyer().getEmail(), seller.getEmail(),
+                order.getBuyer().getNickname(), seller.getNickname(), order.getProduct().getPd_name(), seller.getPhone_nb(), order.getBuyer().getPhone_nb());
 
     }
 
     // 거래 요청 거절
-    public void rejectOrder(String orderNum, Authentication authentication) {
+    public void rejectOrder(String orderNum, Authentication authentication) throws MessagingException {
         // order 찾기
         Order order = orderRepository.findByOrderNum(orderNum)
                 .orElseThrow(() -> new RuntimeException("해당 주문을 찾을 수 없습니다."));
@@ -110,11 +111,12 @@ public class OrderService {
         product.updateProductStatus(AVAILABLE);
         productRepository.save(product);
         // 이메일 발송
-        log.info("{}님, {}이 거래 요청을 거절하셨습니다. 상품 정보 : {}", order.getBuyer().getNickname(), seller.getNickname(), order.getProduct().getPd_name());
+        emailService.rejectOrder(order.getBuyer().getEmail(), order.getBuyer().getNickname(),
+                seller.getNickname(), product.getPd_name());
     }
 
     // 거래 취소 요청
-    public void cancelOrder(String orderNum, Authentication authentication) {
+    public void cancelOrder(String orderNum, Authentication authentication) throws MessagingException {
         // order 찾기
         Order order = orderRepository.findByOrderNum(orderNum)
                 .orElseThrow(() -> new RuntimeException("해당 주문을 찾을 수 없습니다."));
@@ -137,19 +139,20 @@ public class OrderService {
             orderRepository.save(order);
             productRepository.save(product);
             // 이메일 발송
-            log.info("{}님, {}님이 거래를 취소 하셨습니다. 상품 정보 : {}", order.getSeller().getNickname(), buyer.getNickname(), order.getProduct().getPd_name());
-            log.info("{}님, 거래가 취소 되었습니다. 상품 정보 : {}", buyer.getNickname(), order.getProduct().getPd_name());
+            emailService.approveCancel(buyer.getEmail(), buyer.getNickname(),
+                    order.getSeller().getNickname(), product.getPd_name());
             return;
         }
         // 결제 후인 경우
         order.updateRequestCancelOrder(OrderCancelRequestStatus.REQUESTED);
         // 이 때 이메일 발송
-        log.info("{}님, {}님이 거래 취소 요청을 하셨습니다. 상품 정보 : {}", order.getSeller().getNickname(), buyer.getNickname(), order.getProduct().getPd_name());
+        emailService.cancelOrder(order.getSeller().getEmail(), order.getSeller().getNickname(),
+                buyer.getNickname(), product.getPd_name(), order.getOrderNum());
         orderRepository.save(order);
     }
 
     // 거래 취소 요청 승인
-    public void approveCancel(String orderNum, Authentication authentication) {
+    public void approveCancel(String orderNum, Authentication authentication) throws MessagingException {
         User seller = findUserByAuthentication(authentication);
         Order order = orderRepository.findByOrderNum(orderNum)
                 .orElseThrow(() -> new RuntimeException("해당 주문을 찾을 수 없습니다"));
@@ -160,7 +163,7 @@ public class OrderService {
 
         Product product = order.getProduct();
 
-        if (order.getRequestOrder().equals(RequestOrder.REQUESTED)) {
+        if (order.getRequestCancel().equals(OrderCancelRequestStatus.REQUESTED)) {
             order.updateRequestCancelOrder(OrderCancelRequestStatus.APPROVED);
             order.updateRequestOrder(RequestOrder.NONE);
             order.updatePayment(Payment.REFUND); // 바로 환불
@@ -168,14 +171,15 @@ public class OrderService {
             orderRepository.save(order);
             productRepository.save(product);
             // 이메일 발송
-            log.info("{}님, 거래가 취소 되었습니다. 상품 정보 : {}", order.getBuyer().getNickname(), product.getPd_name());
+            emailService.approveCancel(order.getBuyer().getEmail(), order.getBuyer().getNickname(),
+                    seller.getNickname(), product.getPd_name());
         } else {
             throw new RuntimeException("취소 요청된 주문이 아닙니다.");
         }
     }
 
     // 거래 취소 요청 거절
-    public void rejectCancel(String orderNum, Authentication authentication) {
+    public void rejectCancel(String orderNum, Authentication authentication) throws MessagingException {
         User seller = findUserByAuthentication(authentication);
         Order order = orderRepository.findByOrderNum(orderNum)
                 .orElseThrow(() -> new RuntimeException("해당 주문을 찾을 수 없습니다"));
@@ -186,18 +190,19 @@ public class OrderService {
 
         Product product = order.getProduct();
 
-        if (order.getRequestOrder().equals(RequestOrder.REQUESTED)) {
+        if (order.getRequestCancel().equals(OrderCancelRequestStatus.REQUESTED)) {
             order.updateRequestCancelOrder(OrderCancelRequestStatus.REJECTED);
             // 이메일 발송
             orderRepository.save(order);
-            log.info("{}님, 거래가 취소 되었습니다. 상품 정보 : {}", order.getBuyer().getNickname(), product.getPd_name());
+            emailService.rejectCancel(order.getBuyer().getEmail(), order.getBuyer().getNickname(),
+                    seller.getNickname(), product.getPd_name());
         } else {
             throw new RuntimeException("취소 요청된 주문이 아닙니다.");
         }
     }
 
     // 거래 확정
-    public void confirmOrder(String orderNum, Authentication authentication) {
+    public void confirmOrder(String orderNum, Authentication authentication) throws MessagingException {
         Order order = orderRepository.findByOrderNum(orderNum)
                 .orElseThrow(() -> new RuntimeException("해당 주문을 찾을 수 없습니다."));
 
@@ -215,8 +220,10 @@ public class OrderService {
         }
 
         order.orderSuccess(); // 거래 확정
-        log.info("거래가 확정되었습니다. 상품 정보 : {}", product.getPd_name()); // -> 판매자에게
-        log.info("거래를 확정하셨습니다. 상품 정보 : {}", product.getPd_name()); // -> 구매자에게
+
+        emailService.confirmOrder(order.getSeller().getEmail(), buyer.getEmail(),
+                order.getSeller().getNickname(), buyer.getNickname(), product.getPd_name());
+
         orderRepository.save(order);
         product.updateProductStatus(SOLD_OUT);
         productRepository.save(product);
@@ -230,7 +237,7 @@ public class OrderService {
 
     // 스케줄러 - 3일이 지난 거래는 거래 확정 요청 알림 보내기
     @Scheduled(fixedRate = 86400000)
-    public void sendConfirmationNotification() {
+    public void sendConfirmationNotification() throws MessagingException {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime threeDaysAgo = now.minusDays(3);
 
@@ -240,7 +247,8 @@ public class OrderService {
         for (Order order : orders) {
             LocalDateTime selectedTime = parseSelectedTime(order.getSelectedTime());
             if (selectedTime.isBefore(threeDaysAgo)) {
-                log.info("{} 님, 거래가 완료되었다면 확정 버튼을 눌러주세요. 거래 일자 이후 7일이 지나면 자동 확정이 됩니다.", order.getBuyer().getNickname());
+                emailService.after3days(order.getBuyer().getEmail(), order.getBuyer().getNickname(),
+                        order.getSeller().getNickname(), order.getProduct().getPd_name(), order.getOrderNum());
                 // 알림 전송 후 notified 상태 업데이트
                 order.orderNotified();
                 orderRepository.save(order);
@@ -250,7 +258,7 @@ public class OrderService {
 
     // 스케줄러 - 7일이 지나면 자동 거래 확정
     @Scheduled(fixedRate = 86400000)
-    public void confirmSuccess() {
+    public void confirmSuccess() throws MessagingException {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime sevenDaysAgo = now.minusDays(7);
 
@@ -260,7 +268,8 @@ public class OrderService {
         for (Order order : orders) {
             LocalDateTime selectedTime = parseSelectedTime(order.getSelectedTime());
             if (selectedTime.isBefore(sevenDaysAgo)) {
-                log.info("{} 님, 7일이 지나 거래가 확정 되었습니다.", order.getBuyer().getNickname());
+                emailService.after7days(order.getBuyer().getEmail(), order.getBuyer().getNickname(),
+                        order.getProduct().getPd_name());
                 // 알림 전송 후 notified 상태 업데이트
                 order.orderNotified();
                 orderRepository.save(order);

@@ -3,6 +3,7 @@ package com.cocomo.secondhand_transaction.controller;
 import com.cocomo.secondhand_transaction.dto.OrderDto;
 import com.cocomo.secondhand_transaction.entity.Order;
 import com.cocomo.secondhand_transaction.service.OrderService;
+import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -23,7 +24,7 @@ public class OrderController {
     @PostMapping("/request")
     public ResponseEntity<?> requestOrder(
             @RequestBody OrderDto.Order orderDto,
-            Authentication authentication) {
+            Authentication authentication) throws MessagingException {
         orderService.requestOrder(orderDto, authentication);
         return ResponseEntity.ok("거래가 요청 되었습니다. 거래 승인까지 기다려주세요.");
     }
@@ -33,7 +34,7 @@ public class OrderController {
     @PostMapping("/{orderId}/approve")
     public ResponseEntity<?> approveOrder(
             @PathVariable String orderId,
-            Authentication authentication) {
+            Authentication authentication) throws MessagingException {
         orderService.approveOrder(orderId, authentication);
         return ResponseEntity.ok("거래가 승인 되었습니다. 이메일을 확인해주세요.");
     }
@@ -43,7 +44,7 @@ public class OrderController {
     @PostMapping("/{orderId}/reject")
     public ResponseEntity<?> rejectOrder(
             @PathVariable String orderId,
-            Authentication authentication) {
+            Authentication authentication) throws MessagingException {
         orderService.rejectOrder(orderId, authentication);
         return ResponseEntity.ok("거래 승인이 거절되었습니다.");
     }
@@ -54,7 +55,7 @@ public class OrderController {
     public ResponseEntity<?> cancelOrder(
             @PathVariable String orderId,
             Authentication
-                    authentication) {
+                    authentication) throws MessagingException {
         orderService.cancelOrder(orderId, authentication);
         return ResponseEntity.ok("거래 취소가 요청 되었습니다.");
     }
@@ -64,7 +65,7 @@ public class OrderController {
     @PostMapping("/cancel/approve/{orderId}")
     public ResponseEntity<?> approveCancel(
             @PathVariable String orderId,
-            Authentication authentication) {
+            Authentication authentication) throws MessagingException {
         orderService.approveCancel(orderId, authentication);
         return ResponseEntity.ok("거래가 취소 되었습니다.");
     }
@@ -74,7 +75,7 @@ public class OrderController {
     @PostMapping("/cancel/reject/{orderId}")
     public ResponseEntity<?> rejectCancel(
             @PathVariable String orderId,
-            Authentication authentication) {
+            Authentication authentication) throws MessagingException {
         orderService.rejectCancel(orderId, authentication);
         return ResponseEntity.ok("거래 취소가 거절되었습니다.");
     }
@@ -84,7 +85,7 @@ public class OrderController {
     @PostMapping("/confirm/{orderId}")
     public ResponseEntity<?> confirmOrder(
             @PathVariable String orderId,
-            Authentication authentication) {
+            Authentication authentication) throws MessagingException {
         orderService.confirmOrder(orderId, authentication);
         return ResponseEntity.ok("거래가 확정되었습니다.");
     }

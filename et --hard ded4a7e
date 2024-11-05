@@ -1,0 +1,19 @@
+[33m0ca4790[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m HEAD@{0}: reset: moving to 0ca4790
+[33mded4a7e[m HEAD@{1}: commit: Save current changes before checkout
+[33m06a6910[m[33m ([m[1;32mmaster[m[33m, [m[1;32mjiwoo[m[33m)[m HEAD@{2}: checkout: moving from jiwoo to main
+[33m06a6910[m[33m ([m[1;32mmaster[m[33m, [m[1;32mjiwoo[m[33m)[m HEAD@{3}: checkout: moving from jiwoo to jiwoo
+[33m06a6910[m[33m ([m[1;32mmaster[m[33m, [m[1;32mjiwoo[m[33m)[m HEAD@{4}: checkout: moving from master to jiwoo
+[33m06a6910[m[33m ([m[1;32mmaster[m[33m, [m[1;32mjiwoo[m[33m)[m HEAD@{5}: merge main: Fast-forward
+[33m6dee309[m[33m ([m[1;31morigin/master[m[33m)[m HEAD@{6}: checkout: moving from main to master
+[33m06a6910[m[33m ([m[1;32mmaster[m[33m, [m[1;32mjiwoo[m[33m)[m HEAD@{7}: checkout: moving from master to main
+[33m6dee309[m[33m ([m[1;31morigin/master[m[33m)[m HEAD@{8}: checkout: moving from master to master
+[33m6dee309[m[33m ([m[1;31morigin/master[m[33m)[m HEAD@{9}: branch: Reset to origin/master
+[33m6dee309[m[33m ([m[1;31morigin/master[m[33m)[m HEAD@{10}: checkout: moving from main to master
+[33m06a6910[m[33m ([m[1;32mmaster[m[33m, [m[1;32mjiwoo[m[33m)[m HEAD@{11}: commit: commit success
+[33m6dee309[m[33m ([m[1;31morigin/master[m[33m)[m HEAD@{12}: checkout: moving from main to main
+[33m6dee309[m[33m ([m[1;31morigin/master[m[33m)[m HEAD@{13}: Branch: renamed refs/heads/master to refs/heads/main
+[33m6dee309[m[33m ([m[1;31morigin/master[m[33m)[m HEAD@{15}: commit: commit success
+[33mb4b550a[m HEAD@{16}: commit: commit success
+[33mb3ae6ed[m HEAD@{17}: commit: commit success
+[33m559f2f7[m HEAD@{18}: pull origin master: Fast-forward
+[33m0ca4790[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m HEAD@{19}: commit (initial): commit success

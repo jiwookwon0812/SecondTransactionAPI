@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <h2>새로운 거래 요청이 있습니다 !</h2>
+    <p>안녕하세요, <span th:text="${sellerName}"></span>님,
+    <span th:text="${buyerName}"></span>님이 거래 요청을 보냈습니다.</p>
+    <p>상품 : <span th:text="${productName}"></span></p>
+    <a th:href="@{http://localhost:8080/order/{orderId}/approve(orderId=${orderId})}"
+       style="display:inline-block; padding:10px 20px; background-color:#4CAF50; color:white; text-decoration:none; border-radius:5px;">
+        거래 요청 승인
+    </a>
+</body>
+</html>
