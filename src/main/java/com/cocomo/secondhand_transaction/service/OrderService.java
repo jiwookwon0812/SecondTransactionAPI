@@ -17,6 +17,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -54,6 +55,8 @@ public class OrderService {
             throw new RuntimeException("이 상품은 예약 중입니다.");
         } else if (product.getStatus().equals(SOLD_OUT)) {
             throw new RuntimeException("이 상품은 판매 종료된 상품입니다.");
+        } else if (product.getStatus().equals(REPORTED)) {
+            throw new RuntimeException("이 상품은 현재 구매 불가합니다.");
         }
 
         // 판매자 User 객체 찾기
@@ -235,43 +238,34 @@ public class OrderService {
         return LocalDateTime.parse(selectedTime, dateTimeFormatter);
     }
 
-    // 스케줄러 - 3일이 지난 거래는 거래 확정 요청 알림 보내기
-    @Scheduled(fixedRate = 86400000)
-    public void sendConfirmationNotification() throws MessagingException {
+    // 스케줄러 - 3일이 지난 거래는 거래 확정 요청 알림 보내기 + 7일 지난 거래는 자동 거래 확정
+    @Transactional
+    @Scheduled(fixedRate = 86400000) // 하루마다 실행
+    public void processOrderNotifications() throws MessagingException {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime threeDaysAgo = now.minusDays(3);
+        LocalDateTime sevenDaysAgo = now.minusDays(7);
 
-        // 알림을 아직 보내지 않았고, 거래 확정이 안된 주문들만 조회하기
-        List<Order> orders = orderRepository.findBySuccessFalseAndNotifiedFalse();
-
-        for (Order order : orders) {
+        // 3일이 지나고 알림을 보내지 않은 주문들 처리
+        List<Order> notifyOrders = orderRepository.findBySuccessFalseAndNotifiedFalse();
+        for (Order order : notifyOrders) {
             LocalDateTime selectedTime = parseSelectedTime(order.getSelectedTime());
             if (selectedTime.isBefore(threeDaysAgo)) {
                 emailService.after3days(order.getBuyer().getEmail(), order.getBuyer().getNickname(),
                         order.getSeller().getNickname(), order.getProduct().getPd_name(), order.getOrderNum());
-                // 알림 전송 후 notified 상태 업데이트
-                order.orderNotified();
+                order.orderNotified(); // notified = true
                 orderRepository.save(order);
             }
         }
-    }
 
-    // 스케줄러 - 7일이 지나면 자동 거래 확정
-    @Scheduled(fixedRate = 86400000)
-    public void confirmSuccess() throws MessagingException {
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime sevenDaysAgo = now.minusDays(7);
-
-        // 알림을 보냈지만 아직 거래 확정 X인 주문들만 조회
-        List<Order> orders = orderRepository.findBySuccessFalseAndNotifiedTrue();
-
-        for (Order order : orders) {
+        // 7일이 지나고 확정되지 않은 주문들 처리
+        List<Order> confirmOrders = orderRepository.findByReportedFalseAndSuccessFalseAndNotifiedTrue();
+        for (Order order : confirmOrders) {
             LocalDateTime selectedTime = parseSelectedTime(order.getSelectedTime());
             if (selectedTime.isBefore(sevenDaysAgo)) {
                 emailService.after7days(order.getBuyer().getEmail(), order.getBuyer().getNickname(),
                         order.getProduct().getPd_name());
-                // 알림 전송 후 notified 상태 업데이트
-                order.orderNotified();
+                order.orderSuccess(); // 거래 확정
                 orderRepository.save(order);
             }
         }
@@ -294,5 +288,24 @@ public class OrderService {
             responseOrder.setStatus(order.getRequestOrder().toString());
             return responseOrder;
         }).collect(Collectors.toList());
+    }
+
+    // 신고된 거래 중단
+    public void reportOrder(String orderNum, Authentication authentication) {
+        User buyer = findUserByAuthentication(authentication);
+        Order order = orderRepository.findByOrderNum(orderNum)
+                .orElseThrow(() -> new RuntimeException("해당 주문을 찾을 수 없습니다."));
+        if (!buyer.equals(order.getBuyer())) {
+            throw new RuntimeException("구매자 권한이 없습니다.");
+        }
+        if (!order.isReported() || !order.isSuccess()
+            || LocalDateTime.now().isBefore(parseSelectedTime(order.getSelectedTime()))) {
+            throw new RuntimeException("신고할 수 없는 거래입니다.");
+        }
+        order.reportOrder();
+        order.getProduct().updateProductStatus(REPORTED);
+        order.orderNotified();
+        productRepository.save(order.getProduct());
+        orderRepository.save(order);
     }
 }

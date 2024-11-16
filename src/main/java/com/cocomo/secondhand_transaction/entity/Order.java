@@ -27,6 +27,9 @@ public class Order {
     @JsonIgnore
     private Integer id;
 
+    @Column(nullable = false)
+    private boolean reported; // 신고 여부
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "seller_id", nullable = false)
     private User seller;
@@ -78,6 +81,7 @@ public class Order {
 
     // 생성자
     public Order (OrderDto.Order order, User seller, User buyer, Product product) {
+        this.reported = false;
         this.seller = seller;
         this.buyer = buyer;
         this.product = product;
@@ -116,4 +120,10 @@ public class Order {
     public void orderNotified() {
         this.notified = true;
     }
+
+    // 신고 들어왔을 때
+    public void reportOrder() {
+        this.reported = true;
+    }
+
 }

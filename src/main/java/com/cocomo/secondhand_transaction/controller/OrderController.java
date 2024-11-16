@@ -97,4 +97,13 @@ public class OrderController {
         List<OrderDto.responseOrder> orders = orderService.getMyOrder(authentication);
         return ResponseEntity.ok(orders);
     }
+
+    // 거래 신고
+    @PreAuthorize("hasRole('ROLE_USER')")
+    @PostMapping("/report/{orderId}")
+    public ResponseEntity<?> reportOrder(@PathVariable String orderId,
+                                         Authentication authentication) {
+        orderService.reportOrder(orderId, authentication);
+        return ResponseEntity.ok("거래가 신고되었습니다.");
+    }
 }

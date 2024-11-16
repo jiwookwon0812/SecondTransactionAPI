@@ -86,9 +86,6 @@ public class ProductService {
         }
     }
 
-
-
-
     // 2. 위도 경도 -> 위치(주소)로 변환
     public String getLocationFromCoordinates(double latitude, double longitude) {
         String urlString = "https://maps.googleapis.com/maps/api/geocode/json?latlng="

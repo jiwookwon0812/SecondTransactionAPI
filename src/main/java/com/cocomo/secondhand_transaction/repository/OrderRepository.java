@@ -13,7 +13,7 @@ import java.util.Optional;
 public interface OrderRepository extends JpaRepository<Order, Integer> {
     Optional<Order> findByOrderNum(String orderNumber);
     List<Order> findBySuccessFalseAndNotifiedFalse();
-    List<Order> findBySuccessFalseAndNotifiedTrue();
+    List<Order> findByReportedFalseAndSuccessFalseAndNotifiedTrue();
     List<Order> findAllBySeller(User user);
     List<Order> findAllByBuyer(User user);
 }
